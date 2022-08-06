@@ -7,7 +7,7 @@ import (
 
 type Manager struct {
 	nofStations       int
-	graphStructure    *simulationGraph.GraphWrapper
+	graph             *simulationGraph.GraphWrapper
 	stations          []*Station
 	nofActiveStations int
 	nofRounds         int
@@ -24,10 +24,10 @@ func NewManager(nofVertices int, nofRounds int, graph *simulationGraph.GraphWrap
 	b := barrier.New(nofVertices)
 
 	return &Manager{nofStations: nofVertices,
-		stations:       stations,
-		graphStructure: graph,
-		b:              b,
-		nofRounds:      nofRounds}
+		stations:  stations,
+		graph:     graph,
+		b:         b,
+		nofRounds: nofRounds}
 }
 
 func (m Manager) RunSimulation() {
