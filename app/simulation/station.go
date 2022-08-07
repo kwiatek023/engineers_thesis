@@ -1,17 +1,17 @@
 package simulation
 
 import (
-	"app/protocols"
 	"app/simulationGraph"
 	"sync"
 )
 
 type Station struct {
-	manager              Manager
+	manager              *Manager
 	id                   int
 	communicationChannel chan *Pack
+	msgQueue             *MessageQueue
+	observedValues       [][]float64
 	currentData          []float64
-	prevData             []float64
 	nofNeighbours        int
 	isActive             bool
 	graph                *simulationGraph.GraphWrapper
@@ -22,13 +22,14 @@ type Station struct {
 	UserDefinedVariables map[string]interface{}
 }
 
-func NewStation(manager Manager, id int, g *simulationGraph.GraphWrapper) *Station {
+func NewStation(manager *Manager, id int, g *simulationGraph.GraphWrapper) *Station {
 	nofNeighbours := g.GraphStructure.Degree(id)
 	communicationChannel := make(chan *Pack, nofNeighbours)
 
 	return &Station{manager: manager,
 		id:                   id,
 		communicationChannel: communicationChannel,
+		msgQueue:             NewMessageQueue(),
 		currentData:          make([]float64, 0),
 		nofNeighbours:        nofNeighbours,
 		isActive:             true,
@@ -39,9 +40,12 @@ func NewStation(manager Manager, id int, g *simulationGraph.GraphWrapper) *Stati
 		UserDefinedVariables: make(map[string]interface{})}
 }
 
-func (s Station) RunProtocol(protocol protocols.Protocol, wg *sync.WaitGroup) {
+func (s *Station) RunProtocol(protocol Protocol, wg *sync.WaitGroup) {
 	defer wg.Done()
 	protocol.GetInitialData(s)
+	if s.id == 0 {
+		s.currentData[0] = 0
+	}
 	// round 0
 	protocol.OnInitialize(s)
 
@@ -49,6 +53,7 @@ func (s Station) RunProtocol(protocol protocols.Protocol, wg *sync.WaitGroup) {
 	for protocol.StopCondition(s) {
 		s.manager.b.WaitAtFirstBarrier()
 		close(s.communicationChannel)
+		s.receiveMsgs()
 
 		protocol.OnDataReceive(s)
 
@@ -66,41 +71,45 @@ func (s Station) RunProtocol(protocol protocols.Protocol, wg *sync.WaitGroup) {
 	s.manager.b.WaitAtSecondBarrier()
 }
 
-func (s Station) Broadcast() {
+func (s *Station) sendMsgToStation(receiverId int) {
+	packToSend := NewPack(s.currentData, s.roundCounter)
+	s.manager.getStationById(receiverId).communicationChannel <- packToSend
+	s.sentMsgCounter++
+}
+
+func (s *Station) receiveMsgs() {
+	for msg := range s.communicationChannel {
+		s.msgQueue.Enqueue(msg)
+		s.receivedMsgCounter++
+	}
+}
+
+func (s *Station) Broadcast() {
 	s.graph.GraphStructure.Visit(s.id, func(w int, c int64) (skip bool) {
-		//fmt.Println("sending from", vd.id, "to", w)
-		packToSend := NewPack(s.currentData, s.roundCounter)
-		s.manager.stations[w].communicationChannel <- packToSend
-		//fmt.Println("sent from", vd.id, "to", w)
-		s.sentMsgCounter++ // should I count messages here?
+		s.sendMsgToStation(w)
 		return
 	})
 }
 
-func (s Station) SynchronizedBroadcast() {
+func (s *Station) SynchronizedBroadcast() {
 	s.graph.GraphStructure.Visit(s.id, func(w int, c int64) (skip bool) {
-		// acquaire neighbour (if active) mutex to send value safely
-		packToSend := NewPack(s.currentData, s.roundCounter)
-		s.manager.stations[w].mutex.Lock()
-		// if with lock maybe timeout is legal here?
-		//fmt.Println("MINIMUM: sending from", vd.id, "to", w)
-		s.manager.stations[w].communicationChannel <- packToSend
-		s.manager.stations[w].mutex.Unlock()
-		s.sentMsgCounter++ // should I count messages here?
+		s.manager.getStationById(w).mutex.Lock()
+		s.sendMsgToStation(w)
+		s.manager.getStationById(w).mutex.Unlock()
 		return
 	})
 }
 
-func (s Station) SetCurrentData(data []float64) {
+func (s *Station) SetCurrentData(data []float64) {
 	s.currentData = data
 }
 
-func (s Station) GetCurrentData() []float64 {
+func (s *Station) GetCurrentData() []float64 {
 	return s.currentData
 }
 
-func (s Station) GetCommunicationChannel() chan *Pack {
-	return s.communicationChannel
+func (s *Station) GetMsgQueue() *MessageQueue {
+	return s.msgQueue
 }
 
 func (s Station) GetId() int {

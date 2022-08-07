@@ -15,7 +15,7 @@ func ReadGraphFromFile(filepath string) config.JsonGraphStructure {
 
 	gs := config.JsonGraphStructure{}
 
-	err = json.Unmarshal([]byte(file), &gs)
+	err = json.Unmarshal(file, &gs)
 
 	if err != nil {
 		fmt.Println("file content parsing to json problem")

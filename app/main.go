@@ -14,4 +14,5 @@ func main() {
 	g := simulationGraph.BuildGraphFromConfig(conf)
 	manager := simulation.NewManager(conf.Graph.NofVertices, 5, g)
 	manager.RunSimulation()
+
 }
