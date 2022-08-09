@@ -5,21 +5,21 @@ import (
 	"math/rand"
 )
 
-type MinPropagation struct{}
+type MinPropagationProtocol struct{}
 
-func (MinPropagation) GetInitialData(station *Station) {
+func (MinPropagationProtocol) GetInitialData(station *Station) {
 	randValue := rand.ExpFloat64()
 	data := []float64{randValue}
 	station.SetCurrentData(data)
 }
 
-func (MinPropagation) OnInitialize(station *Station) {
+func (MinPropagationProtocol) OnInitialize(station *Station) {
 	data := station.GetCurrentData()
 	station.UserDefinedVariables["min"] = data[0]
 	station.Broadcast()
 }
 
-func (MinPropagation) OnDataReceive(station *Station) {
+func (MinPropagationProtocol) OnDataReceive(station *Station) {
 	min := station.UserDefinedVariables["min"].(float64)
 	mq := station.GetMsgQueue()
 	for mq.Len() > 0 {
@@ -33,7 +33,7 @@ func (MinPropagation) OnDataReceive(station *Station) {
 	station.UserDefinedVariables["min"] = min
 }
 
-func (MinPropagation) OnDataPropagate(station *Station) {
+func (MinPropagationProtocol) OnDataPropagate(station *Station) {
 	min := station.UserDefinedVariables["min"].(float64)
 	currentValue := station.GetCurrentData()[0]
 	if min < currentValue {
@@ -44,11 +44,11 @@ func (MinPropagation) OnDataPropagate(station *Station) {
 
 }
 
-func (MinPropagation) StopCondition(station *Station) bool {
+func (MinPropagationProtocol) StopCondition(station *Station) bool {
 	return station.GetRoundCounter() < 6
 }
 
-func (MinPropagation) OnFinalize(station *Station) {
+func (MinPropagationProtocol) OnFinalize(station *Station) {
 	fmt.Println("result of", station.GetId(),
 		station.GetCurrentData()[0], "msg: ", station.GetSentMsgCounter())
 }

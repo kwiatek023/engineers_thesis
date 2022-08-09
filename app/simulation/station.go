@@ -43,9 +43,6 @@ func NewStation(manager *Manager, id int, g *simulationGraph.GraphWrapper) *Stat
 func (s *Station) RunProtocol(protocol Protocol, wg *sync.WaitGroup) {
 	defer wg.Done()
 	protocol.GetInitialData(s)
-	if s.id == 0 {
-		s.currentData[0] = 0
-	}
 	// round 0
 	protocol.OnInitialize(s)
 

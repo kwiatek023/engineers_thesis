@@ -33,7 +33,7 @@ func NewManager(nofVertices int, nofRounds int, graph *simulationGraph.GraphWrap
 }
 
 func (m Manager) RunSimulation() {
-	p := MinPropagation{}
+	p := MinPropagationProtocol{}
 	var wg sync.WaitGroup
 	wg.Add(len(*m.stations))
 
