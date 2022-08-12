@@ -40,83 +40,83 @@ func NewStation(manager *Manager, id int, g *simulationGraph.GraphWrapper) *Stat
 		UserDefinedVariables: make(map[string]interface{})}
 }
 
-func (s *Station) RunProtocol(protocol Protocol, wg *sync.WaitGroup) {
+func (this *Station) RunProtocol(protocol Protocol, wg *sync.WaitGroup) {
 	defer wg.Done()
-	protocol.GetInitialData(s)
+	protocol.GetInitialData(this)
 	// round 0
-	protocol.OnInitialize(s)
+	protocol.OnInitialize(this)
 
 	// concrete rounds
-	for protocol.StopCondition(s) {
-		s.manager.b.WaitAtFirstBarrier()
-		close(s.communicationChannel)
-		s.receiveMsgs()
+	for protocol.StopCondition(this) {
+		this.manager.b.WaitAtFirstBarrier()
+		close(this.communicationChannel)
+		this.receiveMsgs()
 
-		protocol.OnDataReceive(s)
+		protocol.OnDataReceive(this)
 
-		s.communicationChannel = make(chan *Pack, s.nofNeighbours)
-		s.manager.b.WaitAtSecondBarrier()
+		this.communicationChannel = make(chan *Pack, this.nofNeighbours)
+		this.manager.b.WaitAtSecondBarrier()
 
-		protocol.OnDataPropagate(s)
-		s.roundCounter++
+		protocol.OnDataPropagate(this)
+		this.roundCounter++
 	}
 
 	// sum up round
-	s.manager.b.WaitAtFirstBarrier()
-	protocol.OnFinalize(s)
-	close(s.communicationChannel)
-	s.manager.b.WaitAtSecondBarrier()
+	this.manager.b.WaitAtFirstBarrier()
+	protocol.OnFinalize(this)
+	close(this.communicationChannel)
+	this.manager.b.WaitAtSecondBarrier()
 }
 
-func (s *Station) sendMsgToStation(receiverId int) {
-	packToSend := NewPack(s.currentData, s.roundCounter)
-	s.manager.getStationById(receiverId).communicationChannel <- packToSend
-	s.sentMsgCounter++
+func (this *Station) sendMsgToStation(receiverId int) {
+	packToSend := NewPack(this.currentData, this.roundCounter)
+	this.manager.getStationById(receiverId).communicationChannel <- packToSend
+	this.sentMsgCounter++
 }
 
-func (s *Station) receiveMsgs() {
-	for msg := range s.communicationChannel {
-		s.msgQueue.Enqueue(msg)
-		s.receivedMsgCounter++
+func (this *Station) receiveMsgs() {
+	for msg := range this.communicationChannel {
+		this.msgQueue.Enqueue(msg)
+		this.receivedMsgCounter++
 	}
 }
 
-func (s *Station) Broadcast() {
-	s.graph.GraphStructure.Visit(s.id, func(w int, c int64) (skip bool) {
-		s.sendMsgToStation(w)
+func (this *Station) Broadcast() {
+	this.graph.GraphStructure.Visit(this.id, func(w int, c int64) (skip bool) {
+		this.sendMsgToStation(w)
 		return
 	})
 }
 
-func (s *Station) SynchronizedBroadcast() {
-	s.graph.GraphStructure.Visit(s.id, func(w int, c int64) (skip bool) {
-		s.manager.getStationById(w).mutex.Lock()
-		s.sendMsgToStation(w)
-		s.manager.getStationById(w).mutex.Unlock()
+func (this *Station) SynchronizedBroadcast() {
+	this.graph.GraphStructure.Visit(this.id, func(w int, c int64) (skip bool) {
+		this.manager.getStationById(w).mutex.Lock()
+		this.sendMsgToStation(w)
+		this.manager.getStationById(w).mutex.Unlock()
 		return
 	})
 }
 
-func (s *Station) SetCurrentData(data []float64) {
-	s.currentData = data
+func (this *Station) SetCurrentData(data []float64) {
+	this.currentData = data
 }
 
-func (s *Station) GetCurrentData() []float64 {
-	return s.currentData
+func (this *Station) GetCurrentData() []float64 {
+	return this.currentData
 }
 
-func (s *Station) GetMsgQueue() *MessageQueue {
-	return s.msgQueue
+func (this *Station) GetMsgQueue() *MessageQueue {
+	return this.msgQueue
 }
 
-func (s Station) GetId() int {
-	return s.id
+func (this Station) GetId() int {
+	return this.id
 }
 
-func (s Station) GetSentMsgCounter() int {
-	return s.sentMsgCounter
+func (this Station) GetSentMsgCounter() int {
+	return this.sentMsgCounter
 }
 
-func (s Station) GetRoundCounter() int {
-	return s.roundCounter
+func (this Station) GetRoundCounter() int {
+	return this.roundCounter
 }

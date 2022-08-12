@@ -15,4 +15,5 @@ func main() {
 	manager := simulation.NewManager(conf.Graph.NofVertices, 5, g)
 	manager.RunSimulation()
 
+	simulationGraph.BuildGrid(2, 3, true)
 }

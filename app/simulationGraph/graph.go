@@ -3,12 +3,16 @@ package simulationGraph
 import (
 	"app/config"
 	"github.com/yourbasic/graph"
+	"github.com/yourbasic/graph/build"
+	"math/rand"
 )
 
 type GraphWrapper struct {
 	GraphStructure *graph.Mutable
 	ReliabilityMap map[int]map[int]float64
 }
+
+type nothing struct{}
 
 func NewGraphWrapper(graphStructure *graph.Mutable, reliability map[int]map[int]float64) *GraphWrapper {
 	return &GraphWrapper{GraphStructure: graphStructure, ReliabilityMap: reliability}
@@ -34,4 +38,48 @@ func addReliability(relMap map[int]map[int]float64, firstVertex int, secondVerte
 	relMap[firstVertex][secondVertex] = rel
 	relMap[secondVertex] = map[int]float64{}
 	relMap[secondVertex][firstVertex] = rel
+}
+
+func BuildGrid(m, n int, useReliability bool) *GraphWrapper {
+	nofVertices := m * n
+	g := graph.New(nofVertices)
+	virtualGrid := build.Grid(m, n)
+
+	// set of edges
+	var edges = map[int]map[int]nothing{}
+	for i := 0; i < nofVertices; i++ {
+		edges[i] = map[int]nothing{}
+	}
+
+	for i := 0; i < nofVertices; i++ {
+		virtualGrid.Visit(i, func(w int, c int64) (skip bool) {
+			g.AddBoth(i, w)
+			_, e1 := edges[i][w]
+			_, e2 := edges[w][i]
+
+			//fmt.Println(e1, e2)
+			if !(e1 || e2) {
+				edges[i][w] = nothing{}
+			}
+
+			return
+		})
+	}
+
+	if !useReliability {
+		return NewGraphWrapper(g, nil)
+	}
+
+	var relMap = map[int]map[int]float64{}
+	maxRel := 1.0
+	minRel := 0.9
+
+	for v, e := range edges {
+		for w, _ := range e {
+			rel := minRel + rand.Float64()*(maxRel-minRel)
+			addReliability(relMap, v, w, rel)
+		}
+	}
+
+	return NewGraphWrapper(g, relMap)
 }
