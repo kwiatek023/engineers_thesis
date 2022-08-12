@@ -16,4 +16,5 @@ func main() {
 	manager.RunSimulation()
 
 	simulationGraph.BuildGrid(2, 3, true)
+	simulationGraph.BuildDAryTree(4, 3, true)
 }

@@ -4,6 +4,7 @@ import (
 	"app/config"
 	"github.com/yourbasic/graph"
 	"github.com/yourbasic/graph/build"
+	"math"
 	"math/rand"
 )
 
@@ -60,6 +61,52 @@ func BuildGrid(m, n int, useReliability bool) *GraphWrapper {
 			//fmt.Println(e1, e2)
 			if !(e1 || e2) {
 				edges[i][w] = nothing{}
+			}
+
+			return
+		})
+	}
+
+	if !useReliability {
+		return NewGraphWrapper(g, nil)
+	}
+
+	var relMap = map[int]map[int]float64{}
+	maxRel := 1.0
+	minRel := 0.9
+
+	for v, e := range edges {
+		for w, _ := range e {
+			rel := minRel + rand.Float64()*(maxRel-minRel)
+			addReliability(relMap, v, w, rel)
+		}
+	}
+
+	return NewGraphWrapper(g, relMap)
+}
+
+func BuildDAryTree(nofVertices, degree int, useReliability bool) *GraphWrapper {
+	levels := int(math.Ceil(math.Log(float64(nofVertices*(degree-1)+1)) / math.Log(float64(degree))))
+	virtualGrid := build.Tree(degree, levels)
+	g := graph.New(nofVertices)
+
+	// set of edges
+	var edges = map[int]map[int]nothing{}
+	for i := 0; i < nofVertices; i++ {
+		edges[i] = map[int]nothing{}
+	}
+
+	for i := 0; i < nofVertices; i++ {
+		virtualGrid.Visit(i, func(w int, c int64) (skip bool) {
+			if w < nofVertices {
+				g.AddBoth(i, w)
+				_, e1 := edges[i][w]
+				_, e2 := edges[w][i]
+
+				//fmt.Println(e1, e2)
+				if !(e1 || e2) {
+					edges[i][w] = nothing{}
+				}
 			}
 
 			return
