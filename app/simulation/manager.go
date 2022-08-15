@@ -11,19 +11,17 @@ type Manager struct {
 	graph             *simulationGraph.GraphWrapper
 	stations          *[]*Station
 	nofActiveStations int
-	nofRounds         int
 	b                 *barrier.Barrier
 }
 
-func NewManager(nofVertices int, nofRounds int, graph *simulationGraph.GraphWrapper) *Manager {
+func NewManager(nofVertices int, graph *simulationGraph.GraphWrapper) *Manager {
 	stations := make([]*Station, 0)
 	b := barrier.New(nofVertices)
 
 	manager := &Manager{nofStations: nofVertices,
-		stations:  &stations,
-		graph:     graph,
-		b:         b,
-		nofRounds: nofRounds}
+		stations: &stations,
+		graph:    graph,
+		b:        b}
 
 	for i := 0; i < nofVertices; i++ {
 		stations = append(stations, NewStation(manager, i, graph))
