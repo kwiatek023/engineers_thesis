@@ -2,28 +2,17 @@ package main
 
 import (
 	"app/config"
-	"app/io"
 	"app/simulation"
-	"app/simulationGraph"
-	"fmt"
 	"math/rand"
 	"time"
 )
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	config.InitializeAppArgs()
-	var g *simulationGraph.GraphWrapper
-	if config.Args.GraphFile != "" {
-		conf := io.ReadGraphFromFile(config.Args.GraphFile)
-		g = simulationGraph.BuildGraphFromConfig(conf)
-	} else {
-		g = simulationGraph.BuildGraphFromType()
-	}
-	manager := simulation.NewManager(int(config.Args.NofVertices), g)
+	manager := simulation.NewManager(config.InitializeAppArgs())
 	manager.RunSimulation()
 
-	fmt.Println(g)
+	//fmt.Println(g.GetDiameter())
 
 	//g2 := simulationGraph.BuildGrid(2, 3, true)
 	//fmt.Println(g2)

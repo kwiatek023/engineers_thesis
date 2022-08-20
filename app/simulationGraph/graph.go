@@ -14,12 +14,13 @@ import (
 type GraphWrapper struct {
 	GraphStructure *graph.Mutable
 	ReliabilityMap map[int]map[int]float64
+	diameter       int
 }
 
 type nothing struct{}
 
 func NewGraphWrapper(graphStructure *graph.Mutable, reliability map[int]map[int]float64) *GraphWrapper {
-	return &GraphWrapper{GraphStructure: graphStructure, ReliabilityMap: reliability}
+	return &GraphWrapper{GraphStructure: graphStructure, ReliabilityMap: reliability, diameter: 0}
 }
 
 func BuildGraphFromConfig(conf config.JsonGraphStructure) *GraphWrapper {
@@ -164,8 +165,7 @@ func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGrap
 	return NewGraphWrapper(g, relMap)
 }
 
-func BuildGraphFromType() *GraphWrapper {
-	args := config.Args
+func BuildGraphFromType(args config.AppArgs) *GraphWrapper {
 	params := strings.Split(args.GraphType, ",")
 	graphName := params[0]
 	var g *GraphWrapper
@@ -229,4 +229,67 @@ func BuildGraphFromType() *GraphWrapper {
 	}
 
 	return g
+}
+
+func allPairsShortestPath(g *GraphWrapper) map[int]map[int]float64 {
+	var dist = map[int]map[int]float64{}
+	nofVertices := g.GraphStructure.Order()
+
+	for i := 0; i < nofVertices; i++ {
+		dist[i] = map[int]float64{}
+	}
+
+	for i := 0; i < nofVertices; i++ {
+		dist[i][i] = 0
+	}
+
+	for i := 0; i < nofVertices; i++ {
+		for j := 0; j < nofVertices; j++ {
+			if i != j {
+				if g.GraphStructure.Edge(i, j) {
+					dist[i][j] = 1
+				} else {
+					dist[i][j] = math.Inf(1)
+				}
+			}
+		}
+	}
+
+	for k := 0; k < nofVertices; k++ {
+		for i := 0; i < nofVertices; i++ {
+			for j := 0; j < nofVertices; j++ {
+				if dist[i][k]+dist[k][j] < dist[i][j] {
+					dist[i][j] = dist[i][k] + dist[k][j]
+				}
+			}
+		}
+	}
+
+	return dist
+}
+
+func calcDiameter(g *GraphWrapper) float64 {
+	nofVertices := g.GraphStructure.Order()
+	dist := allPairsShortestPath(g)
+	max := 0.0
+
+	for i := 0; i < nofVertices; i++ {
+		for j := 0; j < nofVertices; j++ {
+			if dist[i][j] != math.Inf(1) {
+				if dist[i][j] > max {
+					max = dist[i][j]
+				}
+			}
+		}
+	}
+
+	return max
+}
+
+func (g *GraphWrapper) GetDiameter() int {
+	if g.diameter == 0 {
+		g.diameter = int(calcDiameter(g))
+	}
+
+	return g.diameter
 }

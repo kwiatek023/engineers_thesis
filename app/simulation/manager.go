@@ -1,6 +1,8 @@
 package simulation
 
 import (
+	"app/config"
+	"app/io"
 	"app/simulationGraph"
 	"app/threading/barrier"
 	"sync"
@@ -9,13 +11,16 @@ import (
 type Manager struct {
 	nofStations       int
 	graph             *simulationGraph.GraphWrapper
-	stations          *[]*Station
+	stations          *[]*SynchronousStation
 	nofActiveStations int
 	b                 *barrier.Barrier
 }
 
-func NewManager(nofVertices int, graph *simulationGraph.GraphWrapper) *Manager {
-	stations := make([]*Station, 0)
+func NewManager(args config.AppArgs) *Manager {
+	graph := prepareSimulationGraph(args)
+
+	nofVertices := graph.GraphStructure.Order()
+	stations := make([]*SynchronousStation, 0)
 	b := barrier.New(nofVertices)
 
 	manager := &Manager{nofStations: nofVertices,
@@ -24,10 +29,22 @@ func NewManager(nofVertices int, graph *simulationGraph.GraphWrapper) *Manager {
 		b:        b}
 
 	for i := 0; i < nofVertices; i++ {
-		stations = append(stations, NewStation(manager, i, graph))
+		stations = append(stations, NewSynchronousStation(manager, i, graph))
 	}
 
 	return manager
+}
+
+func prepareSimulationGraph(args config.AppArgs) *simulationGraph.GraphWrapper {
+	var g *simulationGraph.GraphWrapper
+	if args.GraphFile != "" {
+		conf := io.ReadGraphFromFile(args.GraphFile)
+		g = simulationGraph.BuildGraphFromConfig(conf)
+	} else {
+		g = simulationGraph.BuildGraphFromType(args)
+	}
+
+	return g
 }
 
 func (m Manager) RunSimulation() {
@@ -43,6 +60,6 @@ func (m Manager) RunSimulation() {
 	m.b.Close()
 }
 
-func (m Manager) getStationById(id int) *Station {
+func (m Manager) getStationById(id int) *SynchronousStation {
 	return (*m.stations)[id]
 }

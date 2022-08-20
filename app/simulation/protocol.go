@@ -1,10 +1,10 @@
 package simulation
 
 type Protocol interface {
-	GetInitialData(station *Station)
-	OnInitialize(station *Station)
-	OnDataReceive(station *Station)
-	OnDataPropagate(station *Station)
-	StopCondition(station *Station) bool
-	OnFinalize(station *Station)
+	GetInitialData(station IStation)
+	OnInitialize(station IStation)
+	OnDataReceive(station IStation)
+	OnDataPropagate(station IStation)
+	StopCondition(station IStation) bool
+	OnFinalize(station IStation)
 }

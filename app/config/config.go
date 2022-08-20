@@ -40,22 +40,22 @@ func (args *AppArgs) parseArgs() {
 	flag.BoolVar(&args.UseReliability, "use-reliability", false, "")
 }
 
-// Args - provides arguments of program
-var Args = AppArgs{}
-
 // InitializeAppArgs - initializes and validates arguments
-func InitializeAppArgs() {
-	Args.parseArgs()
+func InitializeAppArgs() AppArgs {
+	var args = AppArgs{}
+	args.parseArgs()
 
-	if Args.GraphFile != "" && Args.GraphType != "" {
-		fmt.Println("You cannot use graph file while trying to build", Args.GraphType)
-	} else if Args.GraphFile == "" && Args.GraphType == "" {
+	if args.GraphFile != "" && args.GraphType != "" {
+		fmt.Println("You cannot use graph file while trying to build", args.GraphType)
+	} else if args.GraphFile == "" && args.GraphType == "" {
 		fmt.Println("You have to specify graph file or graph type")
 	}
 
-	if Args.NofVertices == 0 {
+	if args.NofVertices == 0 {
 		fmt.Println("Number of vertices must be greater than 0")
 	}
 
 	flag.Parse()
+
+	return args
 }
