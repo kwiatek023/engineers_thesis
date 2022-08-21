@@ -24,20 +24,21 @@ type AppArgs struct {
 	// GraphType - specifies graph topology
 	GraphType string
 
-	// NofVertices - number of vertices
-	NofVertices uint
-
 	// UseReliability - specifies if reliability of a network should be tested
 	UseReliability bool
+
+	// Probability - specifies probability of broken edge
+	Probability float64
 }
 
 // parseArgs - parses arguments passed in command line
 func (args *AppArgs) parseArgs() {
 	flag.StringVar(&args.GraphFile, "graph-file", "", "read graph structure from given file")
-	flag.UintVar(&args.NofVertices, "n", 0, "provide number of stations")
 	flag.StringVar(&args.GraphType, "graph-type", "", "provide graph-type "+
-		"(path|clique|regular,$degree|grid,$height,$width|hypercube|tree,$degree)")
-	flag.BoolVar(&args.UseReliability, "use-reliability", false, "")
+		"(path,$number_of_vertices|clique,$number_of_vertices|regular,$number_of_vertices,$degree|grid,$height,$width|hypercube,$dimension"+
+		"|tree,$number_of_vertices,$degree)")
+	flag.BoolVar(&args.UseReliability, "use-reliability", false, "specifies if reliability of a network should be tested")
+	flag.Float64Var(&args.Probability, "p", 0, "specifies probability of broken edge if graph type is provided")
 }
 
 // InitializeAppArgs - initializes and validates arguments
@@ -51,8 +52,8 @@ func InitializeAppArgs() AppArgs {
 		fmt.Println("You have to specify graph file or graph type")
 	}
 
-	if args.NofVertices == 0 {
-		fmt.Println("Number of vertices must be greater than 0")
+	if args.Probability < 0 || args.Probability > 1 {
+		fmt.Println("Probability should be in range 0 .. 1")
 	}
 
 	flag.Parse()

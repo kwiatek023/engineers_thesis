@@ -2,12 +2,11 @@ package simulationGraph
 
 import (
 	"app/config"
+	"app/utils"
 	"fmt"
 	"github.com/yourbasic/graph"
 	"github.com/yourbasic/graph/build"
 	"math"
-	"math/rand"
-	"strconv"
 	"strings"
 )
 
@@ -52,7 +51,7 @@ func addReliability(relMap map[int]map[int]float64, firstVertex int, secondVerte
 	relMap[secondVertex][firstVertex] = rel
 }
 
-func BuildPath(nofVertices int, useReliability bool) *GraphWrapper {
+func BuildPath(nofVertices int, useReliability bool, p float64) *GraphWrapper {
 	g := graph.New(nofVertices)
 
 	for i := 0; i < nofVertices-1; i++ {
@@ -63,38 +62,35 @@ func BuildPath(nofVertices int, useReliability bool) *GraphWrapper {
 		return NewGraphWrapper(g, nil)
 	}
 
-	maxRel := 1.0
-	minRel := 0.9
 	var relMap = map[int]map[int]float64{}
 
 	for i := 0; i < nofVertices-1; i++ {
-		rel := minRel + rand.Float64()*(maxRel-minRel)
-		addReliability(relMap, i, i+1, rel)
+		addReliability(relMap, i, i+1, p)
 	}
 
 	return NewGraphWrapper(g, relMap)
 }
 
-func BuildCompleteGraph(nofVertices int, useReliability bool) *GraphWrapper {
+func BuildCompleteGraph(nofVertices int, useReliability bool, p float64) *GraphWrapper {
 	virtualCompleteGraph := build.Kn(nofVertices)
-	return convertVirtualToMutable(nofVertices, useReliability, virtualCompleteGraph)
+	return convertVirtualToMutable(nofVertices, useReliability, virtualCompleteGraph, p)
 }
 
-func BuildGrid(m, n int, useReliability bool) *GraphWrapper {
+func BuildGrid(m, n int, useReliability bool, p float64) *GraphWrapper {
 	nofVertices := m * n
 	virtualGrid := build.Grid(m, n)
 
-	return convertVirtualToMutable(nofVertices, useReliability, virtualGrid)
+	return convertVirtualToMutable(nofVertices, useReliability, virtualGrid, p)
 }
 
-func BuildDAryTree(nofVertices, degree int, useReliability bool) *GraphWrapper {
+func BuildDAryTree(nofVertices, degree int, useReliability bool, p float64) *GraphWrapper {
 	levels := int(math.Ceil(math.Log(float64(nofVertices*(degree-1)+1)) / math.Log(float64(degree))))
 	virtualTree := build.Tree(degree, levels)
 
-	return convertVirtualToMutable(nofVertices, useReliability, virtualTree)
+	return convertVirtualToMutable(nofVertices, useReliability, virtualTree, p)
 }
 
-func BuildDRegularGraph(nofVertices, degree int, useReliability bool) *GraphWrapper {
+func BuildDRegularGraph(nofVertices, degree int, useReliability bool, p float64) *GraphWrapper {
 	if !(degree < nofVertices && (nofVertices%2 == 0 || degree%2 == 0)) {
 		fmt.Println("Improper data for d-regular graph")
 		//	raise error
@@ -112,17 +108,17 @@ func BuildDRegularGraph(nofVertices, degree int, useReliability bool) *GraphWrap
 	}
 	dRegularVirtualGraph := build.Circulant(nofVertices, distancesBetweenVertexNeighbours...)
 
-	return convertVirtualToMutable(nofVertices, useReliability, dRegularVirtualGraph)
+	return convertVirtualToMutable(nofVertices, useReliability, dRegularVirtualGraph, p)
 }
 
-func BuildHyperCube(dimensions int, useReliability bool) *GraphWrapper {
+func BuildHyperCube(dimensions int, useReliability bool, p float64) *GraphWrapper {
 	virtualHyperCube := build.Hyper(dimensions)
 	nofVertices := int(math.Pow(2, float64(dimensions)))
 
-	return convertVirtualToMutable(nofVertices, useReliability, virtualHyperCube)
+	return convertVirtualToMutable(nofVertices, useReliability, virtualHyperCube, p)
 }
 
-func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGraph *build.Virtual) *GraphWrapper {
+func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGraph *build.Virtual, p float64) *GraphWrapper {
 	g := graph.New(nofVertices)
 
 	// set of edges
@@ -152,13 +148,10 @@ func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGrap
 	}
 
 	var relMap = initRelMap(nofVertices)
-	maxRel := 1.0
-	minRel := 0.9
 
 	for v, e := range edges {
 		for w, _ := range e {
-			rel := minRel + rand.Float64()*(maxRel-minRel)
-			addReliability(relMap, v, w, rel)
+			addReliability(relMap, v, w, p)
 		}
 	}
 
@@ -173,58 +166,36 @@ func BuildGraphFromType(args config.AppArgs) *GraphWrapper {
 	switch strings.ToLower(graphName) {
 	case "clique":
 		{
-			g = BuildCompleteGraph(int(args.NofVertices), args.UseReliability)
+			nofVertices := utils.ParseStrToPositiveInt(params[1])
+			g = BuildCompleteGraph(nofVertices, args.UseReliability, args.Probability)
 		}
 	case "hypercube":
 		{
-			dimensions, err := strconv.Atoi(params[1])
-
-			if err != nil {
-				// TODO handle error
-				panic(err)
-			}
-
-			g = BuildHyperCube(dimensions, args.UseReliability)
+			dimensions := utils.ParseStrToPositiveInt(params[1])
+			g = BuildHyperCube(dimensions, args.UseReliability, args.Probability)
 		}
 	case "path":
 		{
-			g = BuildPath(int(args.NofVertices), args.UseReliability)
+			nofVertices := utils.ParseStrToPositiveInt(params[1])
+			g = BuildPath(nofVertices, args.UseReliability, args.Probability)
 		}
 	case "grid":
 		{
-			m, err := strconv.Atoi(params[1])
-			if err != nil {
-				// TODO handle error
-				panic(err)
-			}
-
-			n, err := strconv.Atoi(params[2])
-			if err != nil {
-				// TODO handle error
-				panic(err)
-			}
-
-			g = BuildGrid(m, n, args.UseReliability)
+			m := utils.ParseStrToPositiveInt(params[1])
+			n := utils.ParseStrToPositiveInt(params[2])
+			g = BuildGrid(m, n, args.UseReliability, args.Probability)
 		}
 	case "tree":
 		{
-			degree, err := strconv.Atoi(params[1])
-			if err != nil {
-				// TODO handle error
-				panic(err)
-			}
-
-			g = BuildDAryTree(int(args.NofVertices), degree, args.UseReliability)
+			nofVertices := utils.ParseStrToPositiveInt(params[1])
+			degree := utils.ParseStrToPositiveInt(params[2])
+			g = BuildDAryTree(nofVertices, degree, args.UseReliability, args.Probability)
 		}
 	case "regular":
 		{
-			degree, err := strconv.Atoi(params[1])
-			if err != nil {
-				// TODO handle error
-				panic(err)
-			}
-
-			g = BuildDRegularGraph(int(args.NofVertices), degree, args.UseReliability)
+			nofVertices := utils.ParseStrToPositiveInt(params[1])
+			degree := utils.ParseStrToPositiveInt(params[2])
+			g = BuildDRegularGraph(nofVertices, degree, args.UseReliability, args.Probability)
 		}
 	}
 
