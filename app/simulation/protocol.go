@@ -7,4 +7,6 @@ type Protocol interface {
 	OnDataPropagate(station IStation)
 	StopCondition(station IStation) bool
 	OnFinalize(station IStation)
+	CalculateStationExactResult(station IStation) float64
+	CalculateGlobalExactResult(stations *[]IStation) float64
 }

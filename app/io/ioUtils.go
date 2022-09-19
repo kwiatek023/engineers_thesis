@@ -2,6 +2,7 @@ package io
 
 import (
 	"app/config"
+	"app/simulation"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,22 @@ func ReadGraphFromFile(filepath string) config.JsonGraphStructure {
 
 	if err != nil {
 		fmt.Println("file content parsing to json problem")
+		panic(err)
 	}
 
 	return gs
+}
+
+func SaveStatistics(filepath string, stats simulation.JsonStatsStructure) {
+	jsonStats, err := json.Marshal(stats)
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile(filepath, jsonStats, 0644)
+	if err != nil {
+		fmt.Println("Could not write result to file.")
+		return
+	}
 }

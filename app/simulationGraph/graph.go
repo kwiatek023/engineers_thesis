@@ -12,14 +12,15 @@ import (
 
 type GraphWrapper struct {
 	GraphStructure *graph.Mutable
-	ReliabilityMap map[int]map[int]float64
+	reliabilityMap map[int]map[int]float64
 	diameter       int
+	edges          map[int]map[int]nothing
 }
 
 type nothing struct{}
 
-func NewGraphWrapper(graphStructure *graph.Mutable, reliability map[int]map[int]float64) *GraphWrapper {
-	return &GraphWrapper{GraphStructure: graphStructure, ReliabilityMap: reliability, diameter: 0}
+func NewGraphWrapper(graphStructure *graph.Mutable, reliability map[int]map[int]float64, edges map[int]map[int]nothing) *GraphWrapper {
+	return &GraphWrapper{GraphStructure: graphStructure, reliabilityMap: reliability, diameter: 0, edges: edges}
 }
 
 func BuildGraphFromConfig(conf config.JsonGraphStructure) *GraphWrapper {
@@ -33,7 +34,9 @@ func BuildGraphFromConfig(conf config.JsonGraphStructure) *GraphWrapper {
 		addReliability(relMap, int(e.Edge[0]), int(e.Edge[1]), e.Reliability)
 	}
 
-	return NewGraphWrapper(g, relMap)
+	edges := makeEdgeSet(g)
+
+	return NewGraphWrapper(g, relMap, edges)
 }
 
 func initRelMap(nofVertices int) map[int]map[int]float64 {
@@ -51,49 +54,65 @@ func addReliability(relMap map[int]map[int]float64, firstVertex int, secondVerte
 	relMap[secondVertex][firstVertex] = rel
 }
 
-func BuildPath(nofVertices int, useReliability bool, p float64) *GraphWrapper {
+func BuildPath(nofVertices int, useReliability bool, pExpr string) *GraphWrapper {
 	g := graph.New(nofVertices)
 
 	for i := 0; i < nofVertices-1; i++ {
 		g.AddBoth(i, i+1)
 	}
 
+	edges := makeEdgeSet(g)
+
 	if !useReliability {
-		return NewGraphWrapper(g, nil)
+		return NewGraphWrapper(g, nil, edges)
 	}
 
-	var relMap = map[int]map[int]float64{}
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
+	var relMap = initRelMap(g.Order())
 
 	for i := 0; i < nofVertices-1; i++ {
 		addReliability(relMap, i, i+1, p)
 	}
 
-	return NewGraphWrapper(g, relMap)
+	return NewGraphWrapper(g, relMap, edges)
 }
 
-func BuildCompleteGraph(nofVertices int, useReliability bool, p float64) *GraphWrapper {
+func BuildClique(nofVertices int, useReliability bool, pExpr string) *GraphWrapper {
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
+
 	virtualCompleteGraph := build.Kn(nofVertices)
+	fmt.Println(virtualCompleteGraph)
 	return convertVirtualToMutable(nofVertices, useReliability, virtualCompleteGraph, p)
 }
 
-func BuildGrid(m, n int, useReliability bool, p float64) *GraphWrapper {
+func BuildGrid(m, n int, useReliability bool, pExpr string) *GraphWrapper {
 	nofVertices := m * n
 	virtualGrid := build.Grid(m, n)
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
 
 	return convertVirtualToMutable(nofVertices, useReliability, virtualGrid, p)
 }
 
-func BuildDAryTree(nofVertices, degree int, useReliability bool, p float64) *GraphWrapper {
+func BuildDAryTree(nofVertices, degree int, useReliability bool, pExpr string) *GraphWrapper {
 	levels := int(math.Ceil(math.Log(float64(nofVertices*(degree-1)+1)) / math.Log(float64(degree))))
 	virtualTree := build.Tree(degree, levels)
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
 
 	return convertVirtualToMutable(nofVertices, useReliability, virtualTree, p)
 }
 
-func BuildDRegularGraph(nofVertices, degree int, useReliability bool, p float64) *GraphWrapper {
+func BuildDRegularGraph(nofVertices, degree int, useReliability bool, pExpr string) *GraphWrapper {
 	if !(degree < nofVertices && (nofVertices%2 == 0 || degree%2 == 0)) {
 		fmt.Println("Improper data for d-regular graph")
-		//	raise error
+		//TODO	raise error
 		return nil
 	}
 
@@ -107,30 +126,74 @@ func BuildDRegularGraph(nofVertices, degree int, useReliability bool, p float64)
 		distancesBetweenVertexNeighbours = append(distancesBetweenVertexNeighbours, nofVertices/2)
 	}
 	dRegularVirtualGraph := build.Circulant(nofVertices, distancesBetweenVertexNeighbours...)
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
 
 	return convertVirtualToMutable(nofVertices, useReliability, dRegularVirtualGraph, p)
 }
 
-func BuildHyperCube(dimensions int, useReliability bool, p float64) *GraphWrapper {
+func BuildHyperCube(dimensions int, useReliability bool, pExpr string) *GraphWrapper {
 	virtualHyperCube := build.Hyper(dimensions)
 	nofVertices := int(math.Pow(2, float64(dimensions)))
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
 
 	return convertVirtualToMutable(nofVertices, useReliability, virtualHyperCube, p)
 }
 
-func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGraph *build.Virtual, p float64) *GraphWrapper {
-	g := graph.New(nofVertices)
+func BuildGridOfCliques(m, n, nofVerticesInClique int, useReliability bool, pExpr string) *GraphWrapper {
+	nofVertices := m * n * nofVerticesInClique
+	clique := build.Kn(nofVerticesInClique)
+	row := build.Kn(nofVerticesInClique)
 
-	// set of edges
+	parameters := make(map[string]interface{}, 0)
+	parameters["n"] = nofVertices
+	p := utils.EvaluateExpression(pExpr, parameters)
+
+	// create row
+	for i := 0; i < n-1; i++ {
+		from := build.Vertex(i * nofVerticesInClique)
+		to := build.Vertex((i + 1) * nofVerticesInClique)
+		row = row.Join(clique, build.EdgeSet{From: from, To: to})
+	}
+
+	rowSize := n * nofVerticesInClique
+	result := build.Empty(1)
+
+	result = result.Connect(0, row)
+	// create columns
+	for i := 0; i < m-1; i++ {
+		from := build.Vertex(i * rowSize)
+		to := build.Vertex((i + 1) * rowSize)
+		result = result.Join(row, build.EdgeSet{From: from, To: to})
+	}
+
+	//	add missing edges
+	for j := 0; j < m-1; j++ {
+		for i := 1; i < n; i++ {
+			from := build.Vertex(j*rowSize + i*nofVerticesInClique)
+			to := build.Vertex(j*rowSize + i*nofVerticesInClique + rowSize)
+			result = result.Add(build.EdgeSet{From: from, To: to})
+		}
+	}
+
+	res := convertVirtualToMutable(nofVertices, useReliability, result, p)
+	fmt.Println(res)
+	return res
+}
+
+func makeEdgeSet(g *graph.Mutable) map[int]map[int]nothing {
+	nofVertices := g.Order()
 	var edges = map[int]map[int]nothing{}
 	for i := 0; i < nofVertices; i++ {
 		edges[i] = map[int]nothing{}
 	}
 
 	for i := 0; i < nofVertices; i++ {
-		immutableGraph.Visit(i, func(w int, c int64) (skip bool) {
+		g.Visit(i, func(w int, c int64) (skip bool) {
 			if w < nofVertices {
-				g.AddBoth(i, w)
 				_, e1 := edges[i][w]
 				_, e2 := edges[w][i]
 
@@ -143,8 +206,27 @@ func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGrap
 		})
 	}
 
+	return edges
+}
+
+func convertVirtualToMutable(nofVertices int, useReliability bool, virtualGraph *build.Virtual, p float64) *GraphWrapper {
+	g := graph.New(nofVertices)
+	fmt.Println("p:", p)
+
+	for i := 0; i < nofVertices; i++ {
+		virtualGraph.Visit(i, func(w int, c int64) (skip bool) {
+			if w < nofVertices {
+				g.AddBoth(i, w)
+			}
+
+			return
+		})
+	}
+
+	edges := makeEdgeSet(g)
+
 	if !useReliability {
-		return NewGraphWrapper(g, nil)
+		return NewGraphWrapper(g, nil, edges)
 	}
 
 	var relMap = initRelMap(nofVertices)
@@ -155,7 +237,7 @@ func convertVirtualToMutable(nofVertices int, useReliability bool, immutableGrap
 		}
 	}
 
-	return NewGraphWrapper(g, relMap)
+	return NewGraphWrapper(g, relMap, edges)
 }
 
 func BuildGraphFromType(args config.AppArgs) *GraphWrapper {
@@ -167,7 +249,7 @@ func BuildGraphFromType(args config.AppArgs) *GraphWrapper {
 	case "clique":
 		{
 			nofVertices := utils.ParseStrToPositiveInt(params[1])
-			g = BuildCompleteGraph(nofVertices, args.UseReliability, args.Probability)
+			g = BuildClique(nofVertices, args.UseReliability, args.Probability)
 		}
 	case "hypercube":
 		{
@@ -263,4 +345,12 @@ func (g *GraphWrapper) GetDiameter() int {
 	}
 
 	return g.diameter
+}
+
+func (g *GraphWrapper) GetEdges() map[int]map[int]nothing {
+	return g.edges
+}
+
+func (g *GraphWrapper) GetRelMap() map[int]map[int]float64 {
+	return g.reliabilityMap
 }

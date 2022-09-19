@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 )
 
@@ -49,6 +50,35 @@ func (MinPropagationProtocol) StopCondition(station IStation) bool {
 }
 
 func (MinPropagationProtocol) OnFinalize(station IStation) {
+	station.SetResult(station.GetCurrentData()[0])
 	fmt.Println("result of", station.GetId(),
 		station.GetCurrentData()[0], "msg: ", station.GetSentMsgCounter())
+}
+
+func (MinPropagationProtocol) CalculateStationExactResult(station IStation) float64 {
+	min := math.Inf(1)
+
+	data := station.GetHistoricalDataForStats()
+	for _, element := range data {
+		if element[0] < min {
+			min = element[0]
+		}
+	}
+
+	return min
+}
+
+func (MinPropagationProtocol) CalculateGlobalExactResult(stations *[]IStation) float64 {
+	min := math.Inf(1)
+
+	for _, station := range *stations {
+		data := station.GetHistoricalDataForStats()
+		for _, element := range data {
+			if element[0] < min {
+				min = element[0]
+			}
+		}
+	}
+
+	return min
 }

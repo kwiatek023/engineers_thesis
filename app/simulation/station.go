@@ -2,9 +2,12 @@ package simulation
 
 import (
 	"app/simulationGraph"
+	"sync"
 )
 
 type IStation interface {
+	RunProtocol(protocol Protocol, wg *sync.WaitGroup, useReliability bool, updateBegin chan bool,
+		updateFinish chan bool)
 	GetId() int
 	Broadcast()
 	SynchronizedBroadcast()
@@ -12,39 +15,51 @@ type IStation interface {
 	GetCurrentData() []float64
 	GetMsgQueue() *MessageQueue
 	GetSentMsgCounter() int
+	GetReceivedMsgCounter() int
+	GetMemoryCounter() int
 	GetRoundCounter() int
 	SetUserDefinedVariable(key string, value interface{})
 	GetUserDefinedVariable(key string) interface{}
 	GetGraph() *simulationGraph.GraphWrapper
+	GetHistoricalDataForStats() [][]float64
+	SetResult(result float64)
+	GetStation() Station
 }
 
 type Station struct {
-	IStation
-	id                   int
-	nofNeighbours        int
-	msgQueue             *MessageQueue
-	currentData          []float64
-	graph                *simulationGraph.GraphWrapper
-	sentMsgCounter       int
-	receivedMsgCounter   int
-	roundCounter         int
-	userDefinedVariables map[string]interface{}
+	IStation               `json:",omitempty"`
+	id                     int `json:"id"`
+	nofNeighbours          int
+	msgQueue               *MessageQueue
+	currentData            []float64
+	historicalDataForStats [][]float64
+	graph                  *simulationGraph.GraphWrapper
+	SentMsgCounter         int `json:"sent_msgs"`
+	ReceivedMsgCounter     int `json:"received_msgs"`
+	RoundCounter           int `json:"nof_rounds"`
+	userDefinedVariables   map[string]interface{}
+	Result                 float64 `json:"result"`
+	ExactResult            float64 `json:"exact_result"`
+	MemoryCounter          int     `json:"memory"`
 }
 
 func NewStation(id int, graph *simulationGraph.GraphWrapper) *Station {
 	nofNeighbours := graph.GraphStructure.Degree(id)
 	return &Station{id: id,
-		nofNeighbours:        nofNeighbours,
-		msgQueue:             NewMessageQueue(),
-		currentData:          make([]float64, 0),
-		graph:                graph,
-		sentMsgCounter:       0,
-		receivedMsgCounter:   0,
-		roundCounter:         0,
-		userDefinedVariables: make(map[string]interface{})}
+		nofNeighbours:          nofNeighbours,
+		msgQueue:               NewMessageQueue(),
+		currentData:            make([]float64, 0),
+		historicalDataForStats: make([][]float64, 0),
+		graph:                  graph,
+		SentMsgCounter:         0,
+		ReceivedMsgCounter:     0,
+		RoundCounter:           0,
+		userDefinedVariables:   make(map[string]interface{}),
+		MemoryCounter:          0}
 }
 
 func (this *Station) SetCurrentData(data []float64) {
+	this.historicalDataForStats = append(this.historicalDataForStats, data)
 	this.currentData = data
 }
 
@@ -61,11 +76,19 @@ func (this *Station) GetId() int {
 }
 
 func (this *Station) GetSentMsgCounter() int {
-	return this.sentMsgCounter
+	return this.SentMsgCounter
+}
+
+func (this *Station) GetReceivedMsgCounter() int {
+	return this.ReceivedMsgCounter
+}
+
+func (this *Station) GetMemoryCounter() int {
+	return this.MemoryCounter
 }
 
 func (this *Station) GetRoundCounter() int {
-	return this.roundCounter
+	return this.RoundCounter
 }
 
 func (this *Station) SetUserDefinedVariable(key string, value interface{}) {
@@ -78,4 +101,12 @@ func (this *Station) GetUserDefinedVariable(key string) interface{} {
 
 func (this *Station) GetGraph() *simulationGraph.GraphWrapper {
 	return this.graph
+}
+
+func (this *Station) GetHistoricalDataForStats() [][]float64 {
+	return this.historicalDataForStats
+}
+
+func (this *Station) SetResult(result float64) {
+	this.Result = result
 }

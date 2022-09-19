@@ -27,8 +27,8 @@ type AppArgs struct {
 	// UseReliability - specifies if reliability of a network should be tested
 	UseReliability bool
 
-	// Probability - specifies probability of broken edge
-	Probability float64
+	// Probability - specifies expression to evaluate probability of broken edge
+	Probability string
 }
 
 // parseArgs - parses arguments passed in command line
@@ -38,25 +38,20 @@ func (args *AppArgs) parseArgs() {
 		"(path,$number_of_vertices|clique,$number_of_vertices|regular,$number_of_vertices,$degree|grid,$height,$width|hypercube,$dimension"+
 		"|tree,$number_of_vertices,$degree)")
 	flag.BoolVar(&args.UseReliability, "use-reliability", false, "specifies if reliability of a network should be tested")
-	flag.Float64Var(&args.Probability, "p", 0, "specifies probability of broken edge if graph type is provided")
+	flag.StringVar(&args.Probability, "p", "0.0", "specifies probability expression for reliability model")
 }
 
 // InitializeAppArgs - initializes and validates arguments
 func InitializeAppArgs() AppArgs {
 	var args = AppArgs{}
 	args.parseArgs()
+	flag.Parse()
 
 	if args.GraphFile != "" && args.GraphType != "" {
-		fmt.Println("You cannot use graph file while trying to build", args.GraphType)
+		fmt.Println("You cannot use graph file while trying to build")
 	} else if args.GraphFile == "" && args.GraphType == "" {
 		fmt.Println("You have to specify graph file or graph type")
 	}
-
-	if args.Probability < 0 || args.Probability > 1 {
-		fmt.Println("Probability should be in range 0 .. 1")
-	}
-
-	flag.Parse()
 
 	return args
 }
