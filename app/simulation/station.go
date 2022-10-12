@@ -23,6 +23,8 @@ type IStation interface {
 	GetGraph() *simulationGraph.GraphWrapper
 	GetHistoricalDataForStats() [][]float64
 	SetResult(result float64)
+	ObserveValue(value []float64)
+	GetObservedValues() [][]float64
 	GetStation() Station
 }
 
@@ -33,6 +35,7 @@ type Station struct {
 	msgQueue               *MessageQueue
 	currentData            []float64
 	historicalDataForStats [][]float64
+	observedValues         [][]float64
 	graph                  *simulationGraph.GraphWrapper
 	SentMsgCounter         int `json:"sent_msgs"`
 	ReceivedMsgCounter     int `json:"received_msgs"`
@@ -50,6 +53,7 @@ func NewStation(id int, graph *simulationGraph.GraphWrapper) *Station {
 		msgQueue:               NewMessageQueue(),
 		currentData:            make([]float64, 0),
 		historicalDataForStats: make([][]float64, 0),
+		observedValues:         make([][]float64, 0),
 		graph:                  graph,
 		SentMsgCounter:         0,
 		ReceivedMsgCounter:     0,
@@ -109,4 +113,12 @@ func (this *Station) GetHistoricalDataForStats() [][]float64 {
 
 func (this *Station) SetResult(result float64) {
 	this.Result = result
+}
+
+func (this *Station) ObserveValue(value []float64) {
+	this.observedValues = append(this.observedValues, value)
+}
+
+func (this *Station) GetObservedValues() [][]float64 {
+	return this.observedValues
 }

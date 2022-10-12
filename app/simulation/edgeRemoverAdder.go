@@ -2,7 +2,6 @@ package simulation
 
 import (
 	"app/simulationGraph"
-	"fmt"
 	"math/rand"
 )
 
@@ -28,7 +27,6 @@ func (this *edgeRemoverAdder) RunEdgeUpdating(done chan bool) {
 			case <-this.edgeUpdateBeginChannel:
 				continue
 			case <-done:
-				fmt.Println("updater: finish")
 				return
 			}
 		}

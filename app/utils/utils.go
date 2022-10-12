@@ -18,6 +18,9 @@ func ParseStrToPositiveInt(str string) int {
 }
 
 func EvaluateExpression(expr string, parameters map[string]interface{}) float64 {
+	if expr == "" {
+		return 0.0
+	}
 	functions := map[string]govaluate.ExpressionFunction{
 		"log": func(args ...interface{}) (interface{}, error) {
 			parameter := args[0].(float64)
@@ -30,7 +33,7 @@ func EvaluateExpression(expr string, parameters map[string]interface{}) float64 
 	result, _ := expression.Evaluate(parameters)
 	p := result.(float64)
 	if p < 0 || p > 1 {
-		fmt.Println("Probability should be in range 0 .. 1")
+		fmt.Println("Probability should be in range [0,1]")
 		panic(nil)
 		//TODO raise error
 	}

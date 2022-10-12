@@ -11,7 +11,6 @@ type SynchronousStation struct {
 	*Station
 	manager              *Manager
 	communicationChannel chan *Pack
-	observedValues       [][]float64
 	mutex                *sync.Mutex
 	maxQueueSize         int
 }
@@ -19,12 +18,10 @@ type SynchronousStation struct {
 func NewSynchronousStation(manager *Manager, id int, g *simulationGraph.GraphWrapper) *SynchronousStation {
 	nofNeighbours := g.GraphStructure.Degree(id)
 	communicationChannel := make(chan *Pack, nofNeighbours)
-	observedValues := make([][]float64, 0)
 
 	return &SynchronousStation{NewStation(id, g),
 		manager,
 		communicationChannel,
-		observedValues,
 		&sync.Mutex{},
 		0}
 }

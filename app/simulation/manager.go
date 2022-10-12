@@ -1,7 +1,6 @@
 package simulation
 
 import (
-	"app/config"
 	"app/simulationGraph"
 	"app/threading/barrier"
 	"github.com/montanaflynn/stats"
@@ -17,7 +16,7 @@ type Manager struct {
 	b                 *barrier.Barrier
 }
 
-func NewManager(args config.AppArgs, graph *simulationGraph.GraphWrapper) *Manager {
+func NewManager(useReliability bool, graph *simulationGraph.GraphWrapper) *Manager {
 	nofVertices := graph.GraphStructure.Order()
 	stations := make([]IStation, 0)
 	b := barrier.New(nofVertices)
@@ -25,7 +24,7 @@ func NewManager(args config.AppArgs, graph *simulationGraph.GraphWrapper) *Manag
 	manager := &Manager{nofStations: nofVertices,
 		stations:       &stations,
 		graph:          graph,
-		useReliability: args.UseReliability,
+		useReliability: useReliability,
 		b:              b}
 
 	for i := 0; i < nofVertices; i++ {
@@ -35,9 +34,9 @@ func NewManager(args config.AppArgs, graph *simulationGraph.GraphWrapper) *Manag
 	return manager
 }
 
-func (m Manager) RunSimulation() JsonStatsStructure {
-	p := MinPropagationProtocol{}
+func (m Manager) RunSimulation(protocolName string) JsonStatsStructure {
 	var wg sync.WaitGroup
+	p := m.getProtocol(protocolName)
 	wg.Add(len(*m.stations))
 	updateBeginChannel := make(chan bool, 1)
 	updateFinishChannel := make(chan bool, 1)
@@ -65,6 +64,15 @@ func (m Manager) RunSimulation() JsonStatsStructure {
 
 func (m Manager) getStationById(id int) IStation {
 	return (*m.stations)[id]
+}
+
+func (m Manager) getProtocol(name string) Protocol {
+	if name == "hll" {
+		return HllProtocol{}
+	} else if name == "minPropagation" {
+		return MinPropagationProtocol{}
+	}
+	return nil
 }
 
 func (m Manager) makeStatsSummary(p Protocol) JsonStatsStructure {

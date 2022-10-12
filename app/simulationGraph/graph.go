@@ -23,7 +23,7 @@ func NewGraphWrapper(graphStructure *graph.Mutable, reliability map[int]map[int]
 	return &GraphWrapper{GraphStructure: graphStructure, reliabilityMap: reliability, diameter: 0, edges: edges}
 }
 
-func BuildGraphFromConfig(conf config.JsonGraphStructure) *GraphWrapper {
+func BuildGraphFromConfig(conf JsonGraphStructure) *GraphWrapper {
 	graphStructure := conf.Graph
 	g := graph.New(int(graphStructure.NofVertices))
 
@@ -35,8 +35,9 @@ func BuildGraphFromConfig(conf config.JsonGraphStructure) *GraphWrapper {
 	}
 
 	edges := makeEdgeSet(g)
-
-	return NewGraphWrapper(g, relMap, edges)
+	resultGraph := NewGraphWrapper(g, relMap, edges)
+	resultGraph.diameter = int(calcDiameter(resultGraph))
+	return resultGraph
 }
 
 func initRelMap(nofVertices int) map[int]map[int]float64 {
@@ -85,7 +86,6 @@ func BuildClique(nofVertices int, useReliability bool, pExpr string) *GraphWrapp
 	p := utils.EvaluateExpression(pExpr, parameters)
 
 	virtualCompleteGraph := build.Kn(nofVertices)
-	fmt.Println(virtualCompleteGraph)
 	return convertVirtualToMutable(nofVertices, useReliability, virtualCompleteGraph, p)
 }
 
@@ -180,7 +180,6 @@ func BuildGridOfCliques(m, n, nofVerticesInClique int, useReliability bool, pExp
 	}
 
 	res := convertVirtualToMutable(nofVertices, useReliability, result, p)
-	fmt.Println(res)
 	return res
 }
 
@@ -211,7 +210,6 @@ func makeEdgeSet(g *graph.Mutable) map[int]map[int]nothing {
 
 func convertVirtualToMutable(nofVertices int, useReliability bool, virtualGraph *build.Virtual, p float64) *GraphWrapper {
 	g := graph.New(nofVertices)
-	fmt.Println("p:", p)
 
 	for i := 0; i < nofVertices; i++ {
 		virtualGraph.Visit(i, func(w int, c int64) (skip bool) {
@@ -240,7 +238,7 @@ func convertVirtualToMutable(nofVertices int, useReliability bool, virtualGraph 
 	return NewGraphWrapper(g, relMap, edges)
 }
 
-func BuildGraphFromType(args config.AppArgs) *GraphWrapper {
+func BuildGraphFromType(args config.AppArgs, buildWithDiameter bool) *GraphWrapper {
 	params := strings.Split(args.GraphType, ",")
 	graphName := params[0]
 	var g *GraphWrapper
@@ -279,8 +277,18 @@ func BuildGraphFromType(args config.AppArgs) *GraphWrapper {
 			degree := utils.ParseStrToPositiveInt(params[2])
 			g = BuildDRegularGraph(nofVertices, degree, args.UseReliability, args.Probability)
 		}
+	case "gridOfCliques":
+		{
+			m := utils.ParseStrToPositiveInt(params[1])
+			n := utils.ParseStrToPositiveInt(params[2])
+			nofVerticesInClique := utils.ParseStrToPositiveInt(params[3])
+			g = BuildGridOfCliques(m, n, nofVerticesInClique, args.UseReliability, args.Probability)
+		}
 	}
 
+	if buildWithDiameter {
+		g.diameter = int(calcDiameter(g))
+	}
 	return g
 }
 
@@ -321,6 +329,10 @@ func allPairsShortestPath(g *GraphWrapper) map[int]map[int]float64 {
 	return dist
 }
 
+func (g *GraphWrapper) SetDiameter(diameter int) {
+	g.diameter = diameter
+}
+
 func calcDiameter(g *GraphWrapper) float64 {
 	nofVertices := g.GraphStructure.Order()
 	dist := allPairsShortestPath(g)
@@ -340,10 +352,6 @@ func calcDiameter(g *GraphWrapper) float64 {
 }
 
 func (g *GraphWrapper) GetDiameter() int {
-	if g.diameter == 0 {
-		g.diameter = int(calcDiameter(g))
-	}
-
 	return g.diameter
 }
 
