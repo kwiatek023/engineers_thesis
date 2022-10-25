@@ -55,7 +55,7 @@ func addReliability(relMap map[int]map[int]float64, firstVertex int, secondVerte
 	relMap[secondVertex][firstVertex] = rel
 }
 
-func BuildPath(nofVertices int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildPath(nofVertices int, reliabilityModel string, pExpr string) *GraphWrapper {
 	g := graph.New(nofVertices)
 
 	for i := 0; i < nofVertices-1; i++ {
@@ -64,7 +64,7 @@ func BuildPath(nofVertices int, useReliability bool, pExpr string) *GraphWrapper
 
 	edges := makeEdgeSet(g)
 
-	if !useReliability {
+	if reliabilityModel == "" {
 		return NewGraphWrapper(g, nil, edges)
 	}
 
@@ -80,36 +80,36 @@ func BuildPath(nofVertices int, useReliability bool, pExpr string) *GraphWrapper
 	return NewGraphWrapper(g, relMap, edges)
 }
 
-func BuildClique(nofVertices int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildClique(nofVertices int, reliabilityModel string, pExpr string) *GraphWrapper {
 	parameters := make(map[string]interface{}, 0)
 	parameters["n"] = nofVertices
 	p := utils.EvaluateExpression(pExpr, parameters)
 
 	virtualCompleteGraph := build.Kn(nofVertices)
-	return convertVirtualToMutable(nofVertices, useReliability, virtualCompleteGraph, p)
+	return convertVirtualToMutable(nofVertices, reliabilityModel, virtualCompleteGraph, p)
 }
 
-func BuildGrid(m, n int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildGrid(m, n int, reliabilityModel string, pExpr string) *GraphWrapper {
 	nofVertices := m * n
 	virtualGrid := build.Grid(m, n)
 	parameters := make(map[string]interface{}, 0)
 	parameters["n"] = nofVertices
 	p := utils.EvaluateExpression(pExpr, parameters)
 
-	return convertVirtualToMutable(nofVertices, useReliability, virtualGrid, p)
+	return convertVirtualToMutable(nofVertices, reliabilityModel, virtualGrid, p)
 }
 
-func BuildDAryTree(nofVertices, degree int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildDAryTree(nofVertices, degree int, reliabilityModel string, pExpr string) *GraphWrapper {
 	levels := int(math.Ceil(math.Log(float64(nofVertices*(degree-1)+1)) / math.Log(float64(degree))))
 	virtualTree := build.Tree(degree, levels)
 	parameters := make(map[string]interface{}, 0)
 	parameters["n"] = nofVertices
 	p := utils.EvaluateExpression(pExpr, parameters)
 
-	return convertVirtualToMutable(nofVertices, useReliability, virtualTree, p)
+	return convertVirtualToMutable(nofVertices, reliabilityModel, virtualTree, p)
 }
 
-func BuildDRegularGraph(nofVertices, degree int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildDRegularGraph(nofVertices, degree int, reliabilityModel string, pExpr string) *GraphWrapper {
 	if !(degree < nofVertices && (nofVertices%2 == 0 || degree%2 == 0)) {
 		fmt.Println("Improper data for d-regular graph")
 		//TODO	raise error
@@ -130,20 +130,20 @@ func BuildDRegularGraph(nofVertices, degree int, useReliability bool, pExpr stri
 	parameters["n"] = nofVertices
 	p := utils.EvaluateExpression(pExpr, parameters)
 
-	return convertVirtualToMutable(nofVertices, useReliability, dRegularVirtualGraph, p)
+	return convertVirtualToMutable(nofVertices, reliabilityModel, dRegularVirtualGraph, p)
 }
 
-func BuildHyperCube(dimensions int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildHyperCube(dimensions int, reliabilityModel string, pExpr string) *GraphWrapper {
 	virtualHyperCube := build.Hyper(dimensions)
 	nofVertices := int(math.Pow(2, float64(dimensions)))
 	parameters := make(map[string]interface{}, 0)
 	parameters["n"] = nofVertices
 	p := utils.EvaluateExpression(pExpr, parameters)
 
-	return convertVirtualToMutable(nofVertices, useReliability, virtualHyperCube, p)
+	return convertVirtualToMutable(nofVertices, reliabilityModel, virtualHyperCube, p)
 }
 
-func BuildGridOfCliques(m, n, nofVerticesInClique int, useReliability bool, pExpr string) *GraphWrapper {
+func BuildGridOfCliques(m, n, nofVerticesInClique int, reliabilityModel string, pExpr string) *GraphWrapper {
 	nofVertices := m * n * nofVerticesInClique
 	clique := build.Kn(nofVerticesInClique)
 	row := build.Kn(nofVerticesInClique)
@@ -179,7 +179,7 @@ func BuildGridOfCliques(m, n, nofVerticesInClique int, useReliability bool, pExp
 		}
 	}
 
-	res := convertVirtualToMutable(nofVertices, useReliability, result, p)
+	res := convertVirtualToMutable(nofVertices, reliabilityModel, result, p)
 	return res
 }
 
@@ -208,7 +208,7 @@ func makeEdgeSet(g *graph.Mutable) map[int]map[int]nothing {
 	return edges
 }
 
-func convertVirtualToMutable(nofVertices int, useReliability bool, virtualGraph *build.Virtual, p float64) *GraphWrapper {
+func convertVirtualToMutable(nofVertices int, reliabilityModel string, virtualGraph *build.Virtual, p float64) *GraphWrapper {
 	g := graph.New(nofVertices)
 
 	for i := 0; i < nofVertices; i++ {
@@ -223,7 +223,7 @@ func convertVirtualToMutable(nofVertices int, useReliability bool, virtualGraph 
 
 	edges := makeEdgeSet(g)
 
-	if !useReliability {
+	if reliabilityModel == "" {
 		return NewGraphWrapper(g, nil, edges)
 	}
 
@@ -247,42 +247,42 @@ func BuildGraphFromType(args config.AppArgs, buildWithDiameter bool) *GraphWrapp
 	case "clique":
 		{
 			nofVertices := utils.ParseStrToPositiveInt(params[1])
-			g = BuildClique(nofVertices, args.UseReliability, args.Probability)
+			g = BuildClique(nofVertices, args.ReliabilityModel, args.Probability)
 		}
 	case "hypercube":
 		{
 			dimensions := utils.ParseStrToPositiveInt(params[1])
-			g = BuildHyperCube(dimensions, args.UseReliability, args.Probability)
+			g = BuildHyperCube(dimensions, args.ReliabilityModel, args.Probability)
 		}
 	case "path":
 		{
 			nofVertices := utils.ParseStrToPositiveInt(params[1])
-			g = BuildPath(nofVertices, args.UseReliability, args.Probability)
+			g = BuildPath(nofVertices, args.ReliabilityModel, args.Probability)
 		}
 	case "grid":
 		{
 			m := utils.ParseStrToPositiveInt(params[1])
 			n := utils.ParseStrToPositiveInt(params[2])
-			g = BuildGrid(m, n, args.UseReliability, args.Probability)
+			g = BuildGrid(m, n, args.ReliabilityModel, args.Probability)
 		}
 	case "tree":
 		{
 			nofVertices := utils.ParseStrToPositiveInt(params[1])
 			degree := utils.ParseStrToPositiveInt(params[2])
-			g = BuildDAryTree(nofVertices, degree, args.UseReliability, args.Probability)
+			g = BuildDAryTree(nofVertices, degree, args.ReliabilityModel, args.Probability)
 		}
 	case "regular":
 		{
 			nofVertices := utils.ParseStrToPositiveInt(params[1])
 			degree := utils.ParseStrToPositiveInt(params[2])
-			g = BuildDRegularGraph(nofVertices, degree, args.UseReliability, args.Probability)
+			g = BuildDRegularGraph(nofVertices, degree, args.ReliabilityModel, args.Probability)
 		}
 	case "gridOfCliques":
 		{
 			m := utils.ParseStrToPositiveInt(params[1])
 			n := utils.ParseStrToPositiveInt(params[2])
 			nofVerticesInClique := utils.ParseStrToPositiveInt(params[3])
-			g = BuildGridOfCliques(m, n, nofVerticesInClique, args.UseReliability, args.Probability)
+			g = BuildGridOfCliques(m, n, nofVerticesInClique, args.ReliabilityModel, args.Probability)
 		}
 	}
 

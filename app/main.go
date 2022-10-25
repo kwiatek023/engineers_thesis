@@ -27,13 +27,17 @@ func main() {
 		}
 
 		fmt.Println("Graph built.")
+
+		if args.GraphCopyFile != "" {
+			io.SaveGraph(args.GraphCopyFile, g)
+		}
 		fmt.Println("Simulation pending.")
-		manager := simulation.NewManager(args.UseReliability, g)
+		manager := simulation.NewManager(args.ReliabilityModel, g)
 		result := manager.RunSimulation(args.ProtocolName)
 
-		//TODO add filenames options
-		io.SaveStatistics("data.json", result)
-		io.SaveGraph("graph.json", g)
+		if args.StatsFile != "" {
+			io.SaveStatistics(args.StatsFile, result)
+		}
 		fmt.Println("Simulation finished.")
 	} else {
 		experiment := strings.Split(args.Experiment, ",")[0]

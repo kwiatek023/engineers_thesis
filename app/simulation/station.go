@@ -6,7 +6,7 @@ import (
 )
 
 type IStation interface {
-	RunProtocol(protocol Protocol, wg *sync.WaitGroup, useReliability bool, updateBegin chan bool,
+	RunProtocol(protocol Protocol, wg *sync.WaitGroup, reliabilityModel string, updateBegin chan bool,
 		updateFinish chan bool)
 	GetId() int
 	Broadcast()

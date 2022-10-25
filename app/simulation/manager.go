@@ -12,20 +12,20 @@ type Manager struct {
 	graph             *simulationGraph.GraphWrapper
 	stations          *[]IStation
 	nofActiveStations int
-	useReliability    bool
+	reliabilityModel  string
 	b                 *barrier.Barrier
 }
 
-func NewManager(useReliability bool, graph *simulationGraph.GraphWrapper) *Manager {
+func NewManager(reliabilityModel string, graph *simulationGraph.GraphWrapper) *Manager {
 	nofVertices := graph.GraphStructure.Order()
 	stations := make([]IStation, 0)
 	b := barrier.New(nofVertices)
 
 	manager := &Manager{nofStations: nofVertices,
-		stations:       &stations,
-		graph:          graph,
-		useReliability: useReliability,
-		b:              b}
+		stations:         &stations,
+		graph:            graph,
+		reliabilityModel: reliabilityModel,
+		b:                b}
 
 	for i := 0; i < nofVertices; i++ {
 		stations = append(stations, NewSynchronousStation(manager, i, graph))
@@ -41,19 +41,18 @@ func (m Manager) RunSimulation(protocolName string) JsonStatsStructure {
 	updateBeginChannel := make(chan bool, 1)
 	updateFinishChannel := make(chan bool, 1)
 	done := make(chan bool)
-	//updater := newEdgeRemover(m.graph, updateBeginChannel, updateFinishChannel)
-	updater := newEdgeRemoverAdder(m.graph, updateBeginChannel, updateFinishChannel)
+	updater := m.getReliabilityModel(m.reliabilityModel, updateBeginChannel, updateFinishChannel)
 
-	if m.useReliability {
+	if m.reliabilityModel != "" {
 		go updater.RunEdgeUpdating(done)
 	}
 
 	for _, s := range *m.stations {
-		go s.RunProtocol(p, &wg, m.useReliability, updateBeginChannel, updateFinishChannel)
+		go s.RunProtocol(p, &wg, m.reliabilityModel, updateBeginChannel, updateFinishChannel)
 	}
 
 	wg.Wait()
-	if m.useReliability {
+	if m.reliabilityModel != "" {
 		done <- true
 	}
 	m.b.Close()
@@ -71,6 +70,15 @@ func (m Manager) getProtocol(name string) Protocol {
 		return HllProtocol{}
 	} else if name == "minPropagation" {
 		return MinPropagationProtocol{}
+	}
+	return nil
+}
+
+func (m Manager) getReliabilityModel(reliabilityModel string, updateBeginChannel, updateFinishChannel chan bool) IEdgeUpdater {
+	if reliabilityModel == "edge-remover" {
+		return newEdgeRemover(m.graph, updateBeginChannel, updateFinishChannel)
+	} else if reliabilityModel == "edge-remover-adder" {
+		return newEdgeRemoverAdder(m.graph, updateBeginChannel, updateFinishChannel)
 	}
 	return nil
 }

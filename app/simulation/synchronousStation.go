@@ -26,7 +26,7 @@ func NewSynchronousStation(manager *Manager, id int, g *simulationGraph.GraphWra
 		0}
 }
 
-func (this *SynchronousStation) RunProtocol(protocol Protocol, wg *sync.WaitGroup, useReliability bool, updateBegin chan bool,
+func (this *SynchronousStation) RunProtocol(protocol Protocol, wg *sync.WaitGroup, reliabilityModel string, updateBegin chan bool,
 	updateFinish chan bool) {
 	defer wg.Done()
 	protocol.GetInitialData(this)
@@ -35,7 +35,7 @@ func (this *SynchronousStation) RunProtocol(protocol Protocol, wg *sync.WaitGrou
 
 	// concrete rounds
 	for protocol.StopCondition(this) {
-		if useReliability {
+		if reliabilityModel != "" {
 			this.waitForUpdate(updateBegin, updateFinish)
 		}
 
@@ -81,14 +81,14 @@ func (this *SynchronousStation) sendMsgToStation(receiverId int) {
 	packToSend := NewPack(this.currentData, this.RoundCounter)
 	s := this.manager.getStationById(receiverId).(*SynchronousStation)
 	s.communicationChannel <- packToSend
-	this.SentMsgCounter++
+	this.SentMsgCounter += len(this.currentData)
 }
 
 func (this *SynchronousStation) receiveMsgs() {
 	for msg := range this.communicationChannel {
 		this.historicalDataForStats = append(this.historicalDataForStats, msg.Data)
 		this.msgQueue.Enqueue(msg)
-		this.ReceivedMsgCounter++
+		this.ReceivedMsgCounter += len(msg.Data)
 	}
 }
 
