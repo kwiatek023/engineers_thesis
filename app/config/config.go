@@ -2,11 +2,10 @@ package config
 
 import (
 	"flag"
-	"fmt"
+	"log"
 )
 
 // AppArgs - configuration of simulator
-// TODO add -help which informs how to use the app
 type AppArgs struct {
 	// GraphFile - if provided, program uses graph topology from a file
 	GraphFile string
@@ -34,7 +33,6 @@ type AppArgs struct {
 }
 
 // parseArgs - parses arguments passed in command line
-// TODO - at the end check with functional reqs
 func (args *AppArgs) parseArgs() {
 	flag.StringVar(&args.GraphFile, "graph-file", "", "read graph structure from given file")
 	flag.StringVar(&args.GraphCopyFile, "graph-copy-file", "", "save copy of graph structure to file")
@@ -56,10 +54,9 @@ func InitializeAppArgs() AppArgs {
 	flag.Parse()
 
 	if args.GraphFile != "" && args.GraphType != "" {
-		fmt.Println("You cannot use graph file while trying to build")
+		log.Fatal("You cannot use graph file while trying to build predefined graph")
 	} else if args.GraphFile == "" && args.GraphType == "" && args.Experiment == "" {
-		fmt.Println("You have to specify graph file or graph type")
-		//TODO error
+		log.Fatal("You have to specify graph file or graph type")
 	}
 
 	return args

@@ -36,7 +36,7 @@ func NewManager(reliabilityModel string, graph *simulationGraph.GraphWrapper) *M
 
 func (m Manager) RunSimulation(protocolName string) JsonStatsStructure {
 	var wg sync.WaitGroup
-	p := m.getProtocol(protocolName)
+	p := m.mapNameToProtocol(protocolName)
 	wg.Add(len(*m.stations))
 	updateBeginChannel := make(chan bool, 1)
 	updateFinishChannel := make(chan bool, 1)
@@ -63,15 +63,6 @@ func (m Manager) RunSimulation(protocolName string) JsonStatsStructure {
 
 func (m Manager) getStationById(id int) IStation {
 	return (*m.stations)[id]
-}
-
-func (m Manager) getProtocol(name string) Protocol {
-	if name == "hll" {
-		return HllProtocol{}
-	} else if name == "minPropagation" {
-		return MinPropagationProtocol{}
-	}
-	return nil
 }
 
 func (m Manager) getReliabilityModel(reliabilityModel string, updateBeginChannel, updateFinishChannel chan bool) IEdgeUpdater {

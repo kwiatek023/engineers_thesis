@@ -2,12 +2,14 @@ package simulation
 
 import (
 	"encoding/binary"
+	"fmt"
 	"hash/fnv"
 	"math"
 	"math/bits"
 	"math/rand"
 )
 
+// HllProtocol - count distinct protocol
 type HllProtocol struct{}
 
 type HyperLogLog struct {
@@ -67,10 +69,8 @@ func (HllProtocol) OnDataReceive(station IStation) {
 func (HllProtocol) OnDataPropagate(station IStation) {
 	vectorChanged := station.GetUserDefinedVariable("vectorChanged").(bool)
 	if vectorChanged {
-		// state changed, inform neighbours
 		station.SynchronizedBroadcast()
 	}
-
 }
 
 func (HllProtocol) StopCondition(station IStation) bool {
@@ -81,16 +81,17 @@ func (HllProtocol) OnFinalize(station IStation) {
 	currentVector := station.GetCurrentData()
 	sum := 0.
 	m := 32.0
+
+	numOfRegistersEqualToZero := 0
 	for _, v := range currentVector {
 		if v != 0 {
-			sum += math.Pow(math.Pow(2, v), -1)
+			sum += math.Pow(math.Pow(2, float64(v)), -1)
+		} else {
+			numOfRegistersEqualToZero++
 		}
 	}
-	estimate := int(.79402 * m * m / sum)
-
-	station.SetResult(float64(estimate))
-	//fmt.Println("result of", station.GetId(),
-	//	station.GetCurrentData(), "msg: ", station.GetSentMsgCounter(), "estimate:", estimate)
+	estimate := .697 * m * m / sum
+	station.SetResult(float64(rangeCorrection(estimate, numOfRegistersEqualToZero)))
 }
 
 func (HllProtocol) CalculateStationExactResult(station IStation) float64 {
@@ -136,35 +137,22 @@ func (h HyperLogLog) Add(data []byte) HyperLogLog {
 	return h
 }
 
-func (h HyperLogLog) Count() uint64 {
-	sum := 0.
-	m := float64(h.m)
-	numOfRegistersEqualToZero := 0
-	for _, v := range h.registers {
-		if v != 0 {
-			sum += math.Pow(math.Pow(2, float64(v)), -1)
-		} else {
-			numOfRegistersEqualToZero++
-		}
-	}
-	estimate := .697 * m * m / sum
-	return h.rangeCorrection(estimate, numOfRegistersEqualToZero)
-}
-
-func (h HyperLogLog) rangeCorrection(estimate float64, numOfRegistersEqualToZero int) uint64 {
+func rangeCorrection(estimate float64, numOfRegistersEqualToZero int) uint64 {
 	var result uint64
 	m := 32
 	if estimate <= (5/2)*float64(m) {
 		if numOfRegistersEqualToZero != 0 {
 			result = uint64(float64(m) * math.Log2(float64(m/numOfRegistersEqualToZero)))
+			fmt.Println("lol")
 		} else {
 			result = uint64(estimate)
 		}
-	} else if estimate <= (1/30)*math.Pow(2, 32) {
+	} else if estimate <= math.Pow(2, 32)/30 {
 		result = uint64(estimate)
 	} else {
 		x := math.Pow(2, 32)
 		result = uint64(-1 * x * math.Log2(1-estimate/x))
+		fmt.Println("lol2")
 	}
 	return result
 }

@@ -5,6 +5,7 @@ import (
 	"math/rand"
 )
 
+// MinPropagationProtocol - extrema propagation protocol
 type MinPropagationProtocol struct{}
 
 func (MinPropagationProtocol) GetInitialData(station IStation) {

@@ -5,26 +5,46 @@ import (
 	"sync"
 )
 
+// IStation - interface used for station module
 type IStation interface {
+	// RunProtocol - runs protocol
 	RunProtocol(protocol Protocol, wg *sync.WaitGroup, reliabilityModel string, updateBegin chan bool,
 		updateFinish chan bool)
+	// GetId - returns station id
 	GetId() int
+	// Broadcast - sends msg to station neighbours
 	Broadcast()
+	// SynchronizedBroadcast - sends msg to station neighbours (threadsafe)
 	SynchronizedBroadcast()
+	// SetCurrentData - sets current vector data in station
 	SetCurrentData(data []float64)
+	// GetCurrentData - returns current vector data in station
 	GetCurrentData() []float64
+	// GetMsgQueue - returns station's message queue
 	GetMsgQueue() *MessageQueue
+	// GetSentMsgCounter - returns sent message counter
 	GetSentMsgCounter() int
+	// GetReceivedMsgCounter - returns received message counter
 	GetReceivedMsgCounter() int
+	// GetMemoryCounter - returns memory counter
 	GetMemoryCounter() int
+	// GetRoundCounter - returns round counter
 	GetRoundCounter() int
+	// SetUserDefinedVariable - sets user defined variable (key - name of variable, value - value of variable)
 	SetUserDefinedVariable(key string, value interface{})
+	// GetUserDefinedVariable - gets user defined variable by name
 	GetUserDefinedVariable(key string) interface{}
+	// GetGraph - returns graph topology
 	GetGraph() *simulationGraph.GraphWrapper
+	// GetHistoricalDataForStats - returns historical data for statistics
 	GetHistoricalDataForStats() [][]float64
+	// SetResult - sets station result
 	SetResult(result float64)
+	// ObserveValue - defines behaviour when station observes a value
 	ObserveValue(value []float64)
+	// GetObservedValues - returns observed values
 	GetObservedValues() [][]float64
+	// GetStation - returns station object
 	GetStation() Station
 }
 

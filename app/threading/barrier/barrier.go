@@ -4,6 +4,7 @@ import (
 	"sync"
 )
 
+// Barrier - structure used for protocol synchronization based on barrier design pattern
 type Barrier struct {
 	workerCounter        int
 	nofWorkers           int

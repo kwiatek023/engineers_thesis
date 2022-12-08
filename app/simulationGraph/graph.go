@@ -3,13 +3,14 @@ package simulationGraph
 import (
 	"app/config"
 	"app/utils"
-	"fmt"
 	"github.com/yourbasic/graph"
 	"github.com/yourbasic/graph/build"
+	"log"
 	"math"
 	"strings"
 )
 
+// GraphWrapper - graph structure used in simulations
 type GraphWrapper struct {
 	GraphStructure *graph.Mutable
 	reliabilityMap map[int]map[int]float64
@@ -23,6 +24,7 @@ func NewGraphWrapper(graphStructure *graph.Mutable, reliability map[int]map[int]
 	return &GraphWrapper{GraphStructure: graphStructure, reliabilityMap: reliability, diameter: 0, edges: edges}
 }
 
+// BuildGraphFromConfig - function which builds graph based on given file
 func BuildGraphFromConfig(conf JsonGraphStructure) *GraphWrapper {
 	graphStructure := conf.Graph
 	g := graph.New(int(graphStructure.NofVertices))
@@ -111,9 +113,7 @@ func BuildDAryTree(nofVertices, degree int, reliabilityModel string, pExpr strin
 
 func BuildDRegularGraph(nofVertices, degree int, reliabilityModel string, pExpr string) *GraphWrapper {
 	if !(degree < nofVertices && (nofVertices%2 == 0 || degree%2 == 0)) {
-		fmt.Println("Improper data for d-regular graph")
-		//TODO	raise error
-		return nil
+		log.Fatal("Improper data for d-regular graph")
 	}
 
 	m := degree / 2
@@ -238,6 +238,7 @@ func convertVirtualToMutable(nofVertices int, reliabilityModel string, virtualGr
 	return NewGraphWrapper(g, relMap, edges)
 }
 
+// BuildGraphFromType - function which builds graph based on given type
 func BuildGraphFromType(args config.AppArgs, buildWithDiameter bool) *GraphWrapper {
 	params := strings.Split(args.GraphType, ",")
 	graphName := params[0]

@@ -7,6 +7,7 @@ import (
 	"sync"
 )
 
+// SynchronousStation - station used for implementing synchronous protocols
 type SynchronousStation struct {
 	*Station
 	manager              *Manager
@@ -26,6 +27,7 @@ func NewSynchronousStation(manager *Manager, id int, g *simulationGraph.GraphWra
 		0}
 }
 
+// RunProtocol - runs protocol
 func (this *SynchronousStation) RunProtocol(protocol Protocol, wg *sync.WaitGroup, reliabilityModel string, updateBegin chan bool,
 	updateFinish chan bool) {
 	defer wg.Done()
@@ -92,6 +94,7 @@ func (this *SynchronousStation) receiveMsgs() {
 	}
 }
 
+// Broadcast - function used for broadcasting information to neighbours
 func (this *SynchronousStation) Broadcast() {
 	this.graph.GraphStructure.Visit(this.id, func(w int, c int64) (skip bool) {
 		this.sendMsgToStation(w)
@@ -99,6 +102,7 @@ func (this *SynchronousStation) Broadcast() {
 	})
 }
 
+// SynchronizedBroadcast - thread-safe function used for broadcasting information to neighbours
 func (this *SynchronousStation) SynchronizedBroadcast() {
 	this.graph.GraphStructure.Visit(this.id, func(w int, c int64) (skip bool) {
 		s := this.manager.getStationById(w).(*SynchronousStation)
